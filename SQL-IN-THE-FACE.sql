@@ -6,8 +6,11 @@ CREATE TABLE usuario (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(50) NOT NULL,
     sobrenome VARCHAR(50) NOT NULL,
-    cpf VARCHAR(11) NOT NULL UNIQUE
+    cpf VARCHAR(11) NOT NULL UNIQUE 
+    CONSTRAINT check_cpf CHECK (CHAR_LENGTH(cpf) = 11)
 );
+
+
 
 CREATE TABLE endereco (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -22,7 +25,11 @@ CREATE TABLE produtos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(20),
     valor DECIMAL(10, 2)
+    CONSTRAINT check_valor_negativo CHECK(valor >=0);
 );
+
+
+
 
 CREATE TABLE carrinho (
     id_carrinho INT AUTO_INCREMENT PRIMARY KEY,
@@ -98,11 +105,10 @@ INSERT INTO
         id_produto,
         qt_itens
     )
-VALUES (2, 6, 1),
-    (2, 7, 2),
-    (2, 8, 3),
-    (2, 9, 3),
-    (2, 10, 4);
+VALUES (3, 6, 10);
+    
+
+    INSERT INTO `carrinho`(id_usuário,id_produto,qt_itens) VALUES(3,1,10);
 
 CREATE VIEW usuario_sem_CPF AS
 SELECT usuario.id, usuario.nome, usuario.sobrenome
@@ -128,3 +134,32 @@ GROUP BY
     `endereco`.rua_nome,
     `endereco`.cep,
     `endereco`.endereco_numero_casa;
+
+    CREATE Table pre_reservados(
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        id_usuario INT,
+        id_produto INT,
+        qt_reservada INT,
+        data_reservada TIMESTAMP DEFAULT NOW()
+        FOREIGN KEY (id_usuario) REFERENCES usuario (id),
+        FOREIGN KEY (id_produto) REFERENCES produtos (id)
+    );
+
+    CREATE Trigger qt_reservados
+    AFTER INSERT ON carrinho
+    FOR EACH ROW
+    BEGIN 
+    UPDATE pre_reservados
+    SET qt_reservada = qt_reservada + 1
+    WHERE id_produto = NEW.id_produto;
+    END;
+
+ 
+INSERT INTO pre_reservados (id_produto,id_usuario,qt_reservada)
+VALUES (1,3 ,1);
+INSERT INTO `carrinho`(id_usuário,id_produto,qt_itens) VALUES(3,1,1);
+
+ SELECT * FROM pre_reservados;
+
+
+ 
