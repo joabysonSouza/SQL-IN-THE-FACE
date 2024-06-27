@@ -4,10 +4,11 @@ CREATE TABLE usuario (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(50) NOT NULL,
     sobrenome VARCHAR(50) NOT NULL,
-    cpf VARCHAR(11) NOT NULL UNIQUE 
-    CONSTRAINT check_cpf CHECK (CHAR_LENGTH(cpf) = 11 AND cpf ~ '^[0-9]+$')
+    cpf VARCHAR(11) NOT NULL UNIQUE CONSTRAINT check_cpf CHECK (
+        CHAR_LENGTH(cpf) = 11
+        AND cpf ~ '^[0-9]+$'
+    )
 );
-
 
 CREATE TABLE endereco (
     id SERIAL PRIMARY KEY,
@@ -19,15 +20,11 @@ CREATE TABLE endereco (
     FOREIGN KEY (id_usuario) REFERENCES usuario (id)
 );
 
-
-
 CREATE TABLE produtos (
-  id SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     nome VARCHAR(20),
-    valor DECIMAL(10, 2)
-    CONSTRAINT check_valor_negativo CHECK(valor >=0)
+    valor DECIMAL(10, 2) CONSTRAINT check_valor_negativo CHECK (valor >= 0)
 );
-
 
 CREATE TABLE carrinho (
     id_carrinho SERIAL PRIMARY KEY,
@@ -38,13 +35,8 @@ CREATE TABLE carrinho (
     FOREIGN KEY (id_produto) REFERENCES produtos (id)
 );
 
-
 INSERT INTO
-    usuario (
-        nome,
-        sobrenome,
-        cpf
-    )
+    usuario (nome, sobrenome, cpf)
 VALUES (
         'Joabyson',
         'Souza',
@@ -56,15 +48,28 @@ VALUES (
         '09876543210'
     );
 
-    INSERT INTO endereco(id_usuario, cep,rua_nome,numero,complemento)VALUES
-    (1,12345678,'AV.logo ali',36,'apartamento 46'),
-    (2,87654321, 'rua dos passa',10,'casa azul');
-
-
-
-
-   
-
+INSERT INTO
+    endereco (
+        id_usuario,
+        cep,
+        rua_nome,
+        numero,
+        complemento
+    )
+VALUES (
+        1,
+        12345678,
+        'AV.logo ali',
+        36,
+        'apartamento 46'
+    ),
+    (
+        2,
+        87654321,
+        'rua dos passa',
+        10,
+        'casa azul'
+    );
 
 INSERT INTO
     produtos (nome, valor)
@@ -116,28 +121,24 @@ GROUP BY
     endereco.cep,
     endereco.numero;
 
-  CREATE Table pre_reservados(
-        id SERIAL PRIMARY KEY,
-        id_usuario INT,
-        id_produto INT,
-        qt_reservada INT,
-        data_reservada TIMESTAMP DEFAULT NOW(),
-        FOREIGN KEY (id_usuario) REFERENCES usuario (id),
-        FOREIGN KEY (id_produto) REFERENCES produtos (id)
-    );
+CREATE Table pre_reservados (
+    id SERIAL PRIMARY KEY,
+    id_usuario INT,
+    id_produto INT,
+    qt_reservada INT,
+    data_reservada TIMESTAMP DEFAULT NOW(),
+    FOREIGN KEY (id_usuario) REFERENCES usuario (id),
+    FOREIGN KEY (id_produto) REFERENCES produtos (id)
+);
 
- CREATE Table estoque(
+CREATE Table estoque (
     id_estoque SERIAL PRIMARY KEY,
     id_produto INT,
     qt_em_estoque INT,
     Foreign Key (id_produto) REFERENCES produtos (id)
- );   
+);
 
- 
-
-
-
-    CREATE OR REPLACE FUNCTION estoque_quantidade()
+CREATE OR REPLACE FUNCTION estoque_quantidade()
     RETURNS TRIGGER AS $$
     BEGIN
 
@@ -148,38 +149,42 @@ GROUP BY
       WHERE id_produto = NEW.id_produto;
       RETURN NEW;
     END;
-    $$ LANGUAGE PLPGSQL; 
-
+    $$ LANGUAGE PLPGSQL;
 
 CREATE TRIGGER qt_estoque
-      AFTER INSERT ON carrinho
-      FOR EACH ROW
-      EXECUTE FUNCTION estoque_quantidade(); 
+AFTER INSERT ON carrinho FOR EACH ROW
+EXECUTE FUNCTION estoque_quantidade ();
 
-
-    CREATE OR REPLACE FUNCTION atualizar_quantidade_reservada()
-    RETURNS TRIGGER AS $$
-    BEGIN
-         UPDATE pre_reservados
-         SET qt_reservada = qt_reservada + new.qt_itens
-         WHERE id_produto = NEW.id_produto;
-         RETURN NEW;
-    END;
-    $$ LANGUAGE PLPGSQL;   
-
+CREATE OR REPLACE FUNCTION atualizar_quantidade_reservada()
+ RETURNS TRIGGER AS $$
+ declare 
+ row numeric;
+ BEGIN
+ select id into row from pre_reservados where 
+ id_produto = NEW.id_produto
+ and id_usuario = NEW.id_usuario;
+ if row is null then
+ insert into pre_reservados(id_usuario,id_produto ,qt_reservada ) 
+ values (NEW.id_usuario,NEW.id_produto,NEW.qt_itens);
+ else
+ update pre_reservados
+ SET qt_reservada = NEW.qt_itens
+ WHERE id_produto = NEW.id_produto
+ and id_usuario = NEW.id_usuario;
+ end if;
+ RETURN NEW;
+ end;
+ $$ LANGUAGE PLPGSQL;
 
 CREATE TRIGGER qt_reservados
-    AFTER INSERT ON carrinho
-    FOR EACH ROW
-    EXECUTE FUNCTION atualizar_quantidade_reservada();
+AFTER INSERT or UPDATE ON carrinho FOR EACH ROW
+EXECUTE FUNCTION atualizar_quantidade_reservada ();
 
 
-INSERT INTO pre_reservados(id_usuario,id_produto,qt_reservada)VALUES(2,1,1);
-INSERT INTO carrinho(id_usuario,id_produto,qt_itens)VALUES(2,1,100);
-    
-INSERT INTO estoque (id_produto, qt_em_estoque)
-VALUES
-    (1, 100),
+
+INSERT INTO
+    estoque (id_produto, qt_em_estoque)
+VALUES (1, 100),
     (2, 100),
     (3, 100),
     (4, 100),
@@ -191,7 +196,4 @@ VALUES
     (10, 100);
 
 
-
-INSERT INTO carrinho(id_usuario,id_produto,qt_itens) VALUES(4,1,1);
-
-
+ 
