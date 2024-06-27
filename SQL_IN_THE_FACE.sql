@@ -197,3 +197,5 @@ VALUES (1, 100),
 
 
  
+SELECT * FROM pre_reservados;
+
